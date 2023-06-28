@@ -11,6 +11,7 @@ using RedMoonGames.Basics;
 public class InventoryModel : ICommonModel
 {
     [SerializeField] private Vector2Int _size;
+    [SerializeField] private float _slotSize;
     [SerializeField] private UnityDictionary<Vector2Int, InventorySlotModel> _slots;
     [SerializeField] private UnityDictionary<Vector2Int, Vector2Int> _slotParents;
     [SerializeField] private UnityDictionary<ItemModel, Vector2Int> _items;
@@ -23,6 +24,11 @@ public class InventoryModel : ICommonModel
     public int SlotsCount
     {
         get => _size.x * _size.y;
+    }
+
+    public float SlotSize
+    {
+        get => _slotSize;
     }
 
     public IReadOnlyDictionary<Vector2Int, InventorySlotModel> Slots
@@ -38,9 +44,10 @@ public class InventoryModel : ICommonModel
     public event Action OnModelChanged;
     public event Action OnItemsChanged;
 
-    public InventoryModel(Vector2Int size)
+    public InventoryModel(Vector2Int size, float slotSize)
     {
         _size = size;
+        _slotSize = slotSize;
 
         _slots = new UnityDictionary<Vector2Int, InventorySlotModel>();
         _slotParents = new UnityDictionary<Vector2Int, Vector2Int>();
@@ -59,6 +66,16 @@ public class InventoryModel : ICommonModel
 
     #region Slots
 
+    public InventorySlotModel GetSlot(Vector2Int slotPosition)
+    {
+        if (!_slots.ContainsKey(slotPosition))
+        {
+            return null;
+        }
+
+        return _slots[slotPosition];
+    }
+
     public IReadOnlyCollection<InventorySlotModel> GetEmptySlots()
     {
         return Slots.Values.Where(x => !x.IsFilled).ToArray();
@@ -72,6 +89,12 @@ public class InventoryModel : ICommonModel
         }
 
         return emptySlots.All(slot => !slot.IsFilled);
+    }
+
+    public Vector2Int GetBoxSideSlotPosition(Vector2Int slot, Vector2Int size)
+    {
+        var sideSlot = slot + size - Vector2Int.one;
+        return sideSlot;
     }
 
     public TryResult TryGetSlotsForSize(Vector2Int slot, Vector2Int size, out IReadOnlyCollection<InventorySlotModel> slots)

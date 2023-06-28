@@ -9,6 +9,7 @@ namespace Game.Inventory.View
 
         protected override void UpdateView(InventoryModel model)
         {
+            _grid.cellSize = new Vector2(model.SlotSize, model.SlotSize);
             SetGridSize(model.Size);
         }
 
