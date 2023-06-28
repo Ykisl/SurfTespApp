@@ -1,3 +1,5 @@
+using Game.Common;
+using Game.Inventory.Model;
 using UnityEngine;
 using UnityEngine.UI;
 

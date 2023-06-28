@@ -1,7 +1,8 @@
-using Item.Model;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using Game.Common;
+using Game.Item.Model;
 
 namespace Game.Item.View
 {

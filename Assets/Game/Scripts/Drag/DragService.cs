@@ -93,8 +93,12 @@ namespace Game.Drag
             }
 
             draggableElements = results
-                .Where(x => x.gameObject.TryGetComponent<IDraggable>(out var draggable))
-                .Select(x => x.gameObject.GetComponent<IDraggable>()).ToList();
+                .Select(x => 
+                {
+                    x.gameObject.TryGetComponent<IDraggable>(out var draggable);
+                    return draggable;
+                })
+                .Where(x => x != null).ToList();
 
             return draggableElements.Count > 0;
         }

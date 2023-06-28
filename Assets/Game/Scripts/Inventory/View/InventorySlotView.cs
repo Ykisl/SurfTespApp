@@ -2,6 +2,7 @@ using Game.Inventory.Model;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using Game.Common;
 
 namespace Game.Inventory.View
 {

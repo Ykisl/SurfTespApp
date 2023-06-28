@@ -1,6 +1,6 @@
 using Game.Common;
 using Game.Drag;
-using Item.Model;
+using Game.Item.Model;
 using RedMoonGames.Basics;
 using UnityEngine;
 
