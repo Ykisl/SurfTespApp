@@ -1,7 +1,6 @@
 using Game.Common;
-using Game.Inventory.Model;
+using Item.Model;
 using RedMoonGames.Basics;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace Game.Inventory.Controller
@@ -28,6 +27,8 @@ namespace Game.Inventory.Controller
             10);
 
             var testModel = new InventoryModel(new Vector2Int(10, 10));
+            testModel.TryAddItem(new Vector2Int(1, 3), new ItemModel(new Vector2Int(3, 3)));
+
             Init(testModel);
         }
 
@@ -48,7 +49,7 @@ namespace Game.Inventory.Controller
             ClearSlots();
 
             var slots = newModel.Slots;
-            foreach(var slot in slots)
+            foreach(var slot in slots.Values)
             {
                 var slotController = _slotsPool.Take();
 

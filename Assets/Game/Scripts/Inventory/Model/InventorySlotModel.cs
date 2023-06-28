@@ -4,7 +4,7 @@ using Game.Common;
 
 namespace Game.Inventory.Model
 {
-    [SerializeField]
+    [Serializable]
     public class InventorySlotModel : ICommonModel
     {
         [SerializeField] private bool _isFilled;
