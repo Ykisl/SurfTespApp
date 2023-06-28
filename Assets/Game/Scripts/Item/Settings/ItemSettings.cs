@@ -1,11 +1,17 @@
-using System.Collections;
-using System.Collections.Generic;
+using RedMoonGames.Database;
 using UnityEngine;
+using System;
 
 namespace Game.Item.Settings
 {
-    public class ItemSettings
+    [Serializable]
+    public class ItemSettings : IDatabaseModelPrimaryKey<string>
     {
+        public string Id;
+        public string Name;
+        public Vector2Int Size;
+        public Sprite Icon;
 
+        public string PrimaryKey => Id;
     }
 }
