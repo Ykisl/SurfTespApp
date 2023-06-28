@@ -8,6 +8,7 @@ namespace Item.Model
     public class ItemModel : ICommonModel
     {
         [SerializeField] private string _name;
+        [SerializeField] private float _state;
         [SerializeField] private Sprite _sprite;
         [SerializeField] private Vector2Int _size;
 
@@ -17,6 +18,16 @@ namespace Item.Model
             set
             {
                 _name = value;
+                OnModelChanged?.Invoke();
+            }
+        }
+
+        public float State
+        {
+            get => _state;
+            set
+            {
+                _state = value;
                 OnModelChanged?.Invoke();
             }
         }
