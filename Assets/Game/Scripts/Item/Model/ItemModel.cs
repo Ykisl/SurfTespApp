@@ -2,7 +2,7 @@ using Game.Common;
 using UnityEngine;
 using System;
 
-namespace Item.Model
+namespace Game.Item.Model
 {
     [Serializable]
     public class ItemModel : ICommonModel

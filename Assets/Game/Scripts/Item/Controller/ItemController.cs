@@ -4,7 +4,7 @@ using Item.Model;
 using RedMoonGames.Basics;
 using UnityEngine;
 
-namespace Item.Controller
+namespace Game.Item.Controller
 {
     public class ItemController : MonoBehaviour, IDraggable
     {

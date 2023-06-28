@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
-namespace Item.View
+namespace Game.Item.View
 {
     public class ItemView : ACommonTypedView<ItemModel>
     {

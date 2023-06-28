@@ -1,7 +1,7 @@
 using Game.Common;
 using Game.Inventory.Model;
-using Item.Controller;
-using Item.Model;
+using Game.Item.Controller;
+using Game.Item.Model;
 using RedMoonGames.Basics;
 using System.Collections.Generic;
 using UnityEngine;

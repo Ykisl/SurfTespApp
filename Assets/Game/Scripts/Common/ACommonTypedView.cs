@@ -1,54 +1,57 @@
 using Game.Common;
 using System;
 
-public abstract class ACommonTypedView<TModel> : ACommonView where TModel : ICommonModel
+namespace Game.Common
 {
-    protected TModel _model;
-
-    public override void SetModel(ICommonModel model)
+    public abstract class ACommonTypedView<TModel> : ACommonView where TModel : ICommonModel
     {
-        ClearSubscriptions();
+        protected TModel _model;
 
-        if (model is not TModel newModel)
+        public override void SetModel(ICommonModel model)
         {
-            throw new NotSupportedException();
+            ClearSubscriptions();
+
+            if (model is not TModel newModel)
+            {
+                throw new NotSupportedException();
+            }
+
+            _model = newModel;
+
+            CreateSubscriptions();
+            UpdateView(_model);
         }
 
-        _model = newModel;
-
-        CreateSubscriptions();
-        UpdateView(_model);
-    }
-
-    private void OnDestroy()
-    {
-        ClearSubscriptions();
-    }
-
-    protected abstract void UpdateView(TModel model);
-
-    protected virtual void CreateSubscriptions()
-    {
-        if (_model == null)
+        private void OnDestroy()
         {
-            return;
+            ClearSubscriptions();
         }
 
-        _model.OnModelChanged += HandleModelChanged;
-    }
+        protected abstract void UpdateView(TModel model);
 
-    protected virtual void ClearSubscriptions()
-    {
-        if (_model == null)
+        protected virtual void CreateSubscriptions()
         {
-            return;
+            if (_model == null)
+            {
+                return;
+            }
+
+            _model.OnModelChanged += HandleModelChanged;
         }
 
-        _model.OnModelChanged -= HandleModelChanged;
-    }
+        protected virtual void ClearSubscriptions()
+        {
+            if (_model == null)
+            {
+                return;
+            }
 
-    protected virtual void HandleModelChanged()
-    {
-        UpdateView(_model);
+            _model.OnModelChanged -= HandleModelChanged;
+        }
+
+        protected virtual void HandleModelChanged()
+        {
+            UpdateView(_model);
+        }
     }
 }
