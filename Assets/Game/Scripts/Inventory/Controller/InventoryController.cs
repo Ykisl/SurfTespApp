@@ -128,19 +128,29 @@ namespace Game.Inventory.Controller
 
         private ItemController CreateItemController(ItemModel item, Vector2Int slotPosition)
         {
-            var sideSlotPosition = _model.GetBoxSideSlotPosition(slotPosition, item.Size);
+            var itemController = Instantiate(_itemControllerPrefab);
+            itemController.Init(item);
+
+            MoveItemControllerToSlot(itemController, slotPosition);
+            _itemControllers.Add(item, itemController);
+
+            return itemController;
+        }
+
+        private void MoveItemControllerToSlot(ItemController itemController, Vector2Int slotPosition)
+        {
+            var sideSlotPosition = _model.GetBoxSideSlotPosition(slotPosition, itemController.Size);
 
             var mainPosition = GetSlotWorldPosition(slotPosition);
             var sidePosition = GetSlotWorldPosition(sideSlotPosition);
 
             var worldPosition = (mainPosition + sidePosition) / 2;
-            var itemController = Instantiate(_itemControllerPrefab, worldPosition, Quaternion.identity, _itemsRoot);
+
+            var itemTransform = itemController.transform;
+            itemTransform.SetParent(_itemsRoot);
+            itemTransform.position = worldPosition;
 
             itemController.SetSlotSize(_model.SlotSize);
-            itemController.Init(item);
-
-            _itemControllers.Add(item, itemController);
-            return itemController;
         }
 
         private void ClearItemControllers()

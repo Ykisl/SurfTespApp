@@ -1,10 +1,12 @@
 using Game.Common;
+using Game.Drag;
 using Item.Model;
+using RedMoonGames.Basics;
 using UnityEngine;
 
 namespace Item.Controller
 {
-    public class ItemController : MonoBehaviour
+    public class ItemController : MonoBehaviour, IDraggable
     {
         [SerializeField] private ACommonView _view;
         [Space]
@@ -12,6 +14,11 @@ namespace Item.Controller
         [SerializeField] private float _slotSize = 50f;
 
         private ItemModel _model;
+
+        public Vector2Int Size
+        {
+            get => _model.Size;
+        }
 
         public void Init(ItemModel model)
         {
@@ -32,6 +39,16 @@ namespace Item.Controller
             {
                 UpdateItemSize(_model.Size);
             }
+        }
+
+        public TryResult TryStartDrag(Vector3 position)
+        {
+            return true;
+        }
+
+        public void StopDrag(Vector3 position, Vector3 startPosition)
+        {
+            
         }
 
         private void UpdateItemSize(Vector2Int itemSize)
