@@ -1,14 +1,21 @@
 using Game.Common;
 using Game.Inventory.Model;
+using Game.Item;
 using Game.Item.Controller;
 using Game.Item.Model;
 using RedMoonGames.Basics;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace Game.Inventory.Controller
 {
+    [Serializable]
+    public class InventoryControllerData
+    {
+        public UnityDictionary<ItemData, Vector2Int> Items = new UnityDictionary<ItemData, Vector2Int>();
+    }
     public class InventoryController : MonoBehaviour
     {
         [SerializeField] private ACommonView _view;
@@ -17,15 +24,16 @@ namespace Game.Inventory.Controller
         [SerializeField] private InventorySlotController _slotPrefab;
         [Space]
         [SerializeField] private RectTransform _itemsRoot;
-        [SerializeField] private ItemController _itemControllerPrefab;
         [Space]
-        [SerializeField] private float _slotSize = 50f;
-        [SerializeField] private Sprite _testItemSpite;
+        [SerializeField] private ItemsService _itemsService;
 
         private InventoryModel _model;
+        private InventoryControllerData _data = new InventoryControllerData();
+
         private Pool<InventorySlotController> _slotsPool;
         private Dictionary<InventorySlotModel, InventorySlotController> _slotControllers;
-        private Dictionary<ItemModel, ItemController> _itemControllers;
+
+        public event Action<InventoryController, ItemData, Vector2Int> OnItemLoad;
 
         private void Awake()
         {
@@ -38,18 +46,6 @@ namespace Game.Inventory.Controller
             }, 10);
 
             _slotControllers = new Dictionary<InventorySlotModel, InventorySlotController>();
-            _itemControllers = new Dictionary<ItemModel, ItemController>();
-        }
-
-        private void Start()
-        {
-            var testModel = new InventoryModel(new Vector2Int(10, 10), _slotSize);
-            testModel.TryAddItem(new Vector2Int(1, 3), new ItemModel(new Vector2Int(3, 3)) 
-            {
-                Sprite = _testItemSpite
-            });
-
-            Init(testModel);
         }
 
         public void Init(InventoryModel model)
@@ -62,7 +58,31 @@ namespace Game.Inventory.Controller
 
             _view.SetModel(_model);
             UpdateSlotControllers(_model);
-            UpdateItemControllers(_model);
+        }
+
+        public void Load(InventoryControllerData data)
+        {
+            _data = data ?? new InventoryControllerData();
+
+            foreach (var itemPair in _data.Items)
+            {
+                var itemData = itemPair.Key;
+                if (!_itemsService.TryCreateItem(itemData.ItemId, out var itemModel, out var itemController))
+                {
+                    continue;
+                }
+
+                itemModel.State = itemData.State;
+                var itemPosition = itemPair.Value;
+
+                if (!_model.TryAddItem(itemPosition, itemModel))
+                {
+                    _itemsService.RemoveItem(itemController);
+                    continue;
+                }
+
+                MoveItemControllerToSlot(itemController, itemPosition);
+            }
         }
 
         public Vector2 GetSlotWorldPosition(Vector2Int slotPosition)
@@ -80,6 +100,11 @@ namespace Game.Inventory.Controller
 
             var slotController = _slotControllers[slot];
             return slotController.transform.position;
+        }
+
+        public bool IsSlotBoxEmpty(Vector2Int slotPosition, Vector2Int slotSize)
+        {
+            return _model.TryGetEmptySlotsForSize(slotPosition, slotSize, out var slots);
         }
 
         private void UpdateSlotControllers(InventoryModel newModel)
@@ -115,30 +140,9 @@ namespace Game.Inventory.Controller
             }
         }
 
-        private void UpdateItemControllers(InventoryModel newModel)
-        {
-            ClearItemControllers();
-
-            var items = newModel.Items;
-            foreach(var item in items)
-            {
-                CreateItemController(item.Key, item.Value);
-            }
-        }
-
-        private ItemController CreateItemController(ItemModel item, Vector2Int slotPosition)
-        {
-            var itemController = Instantiate(_itemControllerPrefab);
-            itemController.Init(item);
-
-            MoveItemControllerToSlot(itemController, slotPosition);
-            _itemControllers.Add(item, itemController);
-
-            return itemController;
-        }
-
         private void MoveItemControllerToSlot(ItemController itemController, Vector2Int slotPosition)
         {
+            Debug.Log(_model);
             var sideSlotPosition = _model.GetBoxSideSlotPosition(slotPosition, itemController.Size);
 
             var mainPosition = GetSlotWorldPosition(slotPosition);
@@ -151,17 +155,6 @@ namespace Game.Inventory.Controller
             itemTransform.position = worldPosition;
 
             itemController.SetSlotSize(_model.SlotSize);
-        }
-
-        private void ClearItemControllers()
-        {
-            foreach (var itemPair in _itemControllers)
-            {
-                var itemGameObject = itemPair.Value.gameObject;
-                Destroy(itemGameObject);
-            }
-
-            _itemControllers.Clear();
         }
     }
 }

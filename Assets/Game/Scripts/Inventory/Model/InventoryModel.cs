@@ -11,15 +11,21 @@ namespace Game.Inventory.Model
     [Serializable]
     public class InventoryModel : ICommonModel
     {
-        [SerializeField] private Vector2Int _size;
-        [SerializeField] private float _slotSize;
-        [SerializeField] private UnityDictionary<Vector2Int, InventorySlotModel> _slots;
-        [SerializeField] private UnityDictionary<Vector2Int, Vector2Int> _slotParents;
-        [SerializeField] private UnityDictionary<ItemModel, Vector2Int> _items;
+        private Vector2Int _size;
+        private float _slotSize;
+
+        private Dictionary<Vector2Int, InventorySlotModel> _slots;
+        private Dictionary<Vector2Int, Vector2Int> _slotParents;
+        private Dictionary<ItemModel, Vector2Int> _items;
 
         public Vector2Int Size
         {
             get => _size;
+        }
+
+        public IReadOnlyDictionary<ItemModel, Vector2Int> Items
+        {
+            get => _items;
         }
 
         public int SlotsCount
@@ -37,22 +43,16 @@ namespace Game.Inventory.Model
             get => _slots;
         }
 
-        public IReadOnlyDictionary<ItemModel, Vector2Int> Items
-        {
-            get => _items;
-        }
-
         public event Action OnModelChanged;
-        public event Action OnItemsChanged;
 
         public InventoryModel(Vector2Int size, float slotSize)
         {
             _size = size;
             _slotSize = slotSize;
 
-            _slots = new UnityDictionary<Vector2Int, InventorySlotModel>();
-            _slotParents = new UnityDictionary<Vector2Int, Vector2Int>();
-            _items = new UnityDictionary<ItemModel, Vector2Int>();
+            _slots = new Dictionary<Vector2Int, InventorySlotModel>();
+            _slotParents = new Dictionary<Vector2Int, Vector2Int>();
+            _items = new Dictionary<ItemModel, Vector2Int>();
 
             for (int i = 0; i < _size.y; i++)
             {
@@ -158,6 +158,5 @@ namespace Game.Inventory.Model
         }
 
         #endregion
-
     }
 }

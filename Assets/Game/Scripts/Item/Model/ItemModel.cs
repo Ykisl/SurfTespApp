@@ -7,10 +7,21 @@ namespace Game.Item.Model
     [Serializable]
     public class ItemModel : ICommonModel
     {
-        [SerializeField] private string _name;
-        [SerializeField] private float _state;
-        [SerializeField] private Sprite _sprite;
-        [SerializeField] private Vector2Int _size;
+        private string _id;
+        private string _name;
+        private float _state;
+        private Sprite _sprite;
+        private Vector2Int _size;
+
+        public string Id
+        {
+            get => _id;
+            set
+            {
+                _id = value;
+                OnModelChanged?.Invoke();
+            }
+        }
 
         public string Name
         {
