@@ -92,6 +92,22 @@ namespace Game.Inventory.Model
             return emptySlots.All(slot => !slot.IsFilled);
         }
 
+        public TryResult TryGetAvalibleSlotPositionForSize(Vector2Int size, out Vector2Int avalibleSlot)
+        {
+            var emptySlots = GetEmptySlots();
+            foreach(var slot in emptySlots)
+            {
+                if(TryGetEmptySlotsForSize(slot.SlotPosition, size, out var boxEmptySlots))
+                {
+                    avalibleSlot = slot.SlotPosition;
+                    return true;
+                }
+            }
+
+            avalibleSlot = Vector2Int.zero;
+            return false;
+        }
+
         public Vector2Int GetBoxSideSlotPosition(Vector2Int slot, Vector2Int size)
         {
             var sideSlot = slot + size - Vector2Int.one;
@@ -130,6 +146,11 @@ namespace Game.Inventory.Model
             return true;
         }
 
+        public IReadOnlyCollection<Vector2Int> GetChildSlotsPosition(Vector2Int slotPosition)
+        {
+            return _slotParents.Where(x => x.Value == slotPosition).Select(x => x.Key).ToList();
+        }
+
         #endregion
 
         #region Items
@@ -154,7 +175,31 @@ namespace Game.Inventory.Model
                 _slotParents.Add(subSlot.SlotPosition, slotPosition);
             }
 
+            OnModelChanged?.Invoke();
             return true;
+        }
+
+        public void RemoveItem(ItemModel item)
+        {
+            if (item == null)
+            {
+                return;
+            }
+
+            if(!_items.TryGetValue(item, out var mainSlotPosition))
+            {
+                return;
+            }
+
+            _items.Remove(item);
+
+            var childSlotPositions = GetChildSlotsPosition(mainSlotPosition);
+            foreach(var childSlotPosition in childSlotPositions)
+            {
+                var slot = _slots[childSlotPosition];
+                slot.IsFilled = false;
+                _slotParents.Remove(childSlotPosition);
+            }
         }
 
         #endregion

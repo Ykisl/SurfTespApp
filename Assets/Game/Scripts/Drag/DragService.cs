@@ -10,10 +10,14 @@ namespace Game.Drag
     public class DragService : MonoBehaviour
     {
         [SerializeField] private Camera _camera;
+        [SerializeField] private Transform _draggableRoot;
+        [Space]
+        [SerializeField] private float _maxDistanceForTap = 0.05f;
 
         private IDraggable _currentDraggableElement;
         private Transform _currentDraggableTransform;
         private Vector3 _dragStartPosition;
+        private Vector3 _dragStartMousePosition;
 
         private void Update()
         {
@@ -27,7 +31,7 @@ namespace Game.Drag
 
             if (Input.GetMouseButtonUp(0))
             {
-                StopDrag(screenPosition);
+                StopDrag(mousePosition, screenPosition);
             }
 
             if(_currentDraggableTransform != null)
@@ -43,7 +47,7 @@ namespace Game.Drag
                 return false;
             }
 
-            if(!TryGetDraggableElements(position, out var draggableElements))
+            if(!TryGetElementsInPosition<IDraggable>(position, out var draggableElements))
             {
                 return false;
             }
@@ -54,30 +58,47 @@ namespace Game.Drag
                 return false;
             }
 
+            _dragStartMousePosition = position;
             _currentDraggableElement = draggableElement;
             if(_currentDraggableElement is MonoBehaviour mono)
             {
                 _currentDraggableTransform = mono.transform;
                 _dragStartPosition = _currentDraggableTransform.position;
+
+                _currentDraggableTransform.SetParent(_draggableRoot);
             }
 
             return true;
         }
 
-        private void StopDrag(Vector3 screenPosition)
+        private void StopDrag(Vector3 position, Vector3 screenPosition)
         {
             if (_currentDraggableElement == null)
             {
                 return;
             }
 
-            _currentDraggableElement.StopDrag(screenPosition, _dragStartPosition);
+            var dragDistance = Vector2.Distance(_dragStartMousePosition, position);
+            if(dragDistance <= _maxDistanceForTap)
+            {
+                _currentDraggableElement.Tap(position);
+            }
+            else
+            {
+                TryGetElementsInPosition<IDragTarget>(position, out var dragTargets);
+                var validDragTargets = dragTargets?.Where(target => target.IsValdDraggable(_currentDraggableElement));
+                var dragTarget = validDragTargets?.FirstOrDefault();
 
+                _currentDraggableElement.StopDrag(dragTarget, position, _dragStartPosition, dragDistance);
+                dragTarget?.DropDraggable(_currentDraggableElement);
+            }
+
+            _currentDraggableTransform = null;
             _currentDraggableTransform = null;
             _currentDraggableElement = null;
         }
 
-        private TryResult TryGetDraggableElements(Vector3 position, out ICollection<IDraggable> draggableElements)
+        private TryResult TryGetElementsInPosition<TElementType>(Vector3 position, out ICollection<TElementType> elements)
         {
             var pointerEventData = new PointerEventData(EventSystem.current)
             {
@@ -88,19 +109,19 @@ namespace Game.Drag
             EventSystem.current.RaycastAll(pointerEventData, results);
             if (results.Count <= 0)
             {
-                draggableElements = null;
+                elements = null;
                 return false;
             }
 
-            draggableElements = results
+            elements = results
                 .Select(x => 
                 {
-                    x.gameObject.TryGetComponent<IDraggable>(out var draggable);
-                    return draggable;
+                    x.gameObject.TryGetComponent<TElementType>(out var element);
+                    return element;
                 })
                 .Where(x => x != null).ToList();
 
-            return draggableElements.Count > 0;
+            return elements.Count > 0;
         }
     }
 }

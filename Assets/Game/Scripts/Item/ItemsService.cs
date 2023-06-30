@@ -17,9 +17,20 @@ namespace Game.Item
 
         public TryResult TryCreateItem(string itemId, out ItemModel itemModel, out ItemController itemController)
         {
+            var itemData = new ItemData
+            {
+                ItemId = itemId
+            };
+
+            return TryCreateItem(itemData, out itemModel, out itemController);
+        }
+
+        public TryResult TryCreateItem(ItemData itemData, out ItemModel itemModel, out ItemController itemController)
+        {
             itemModel = null;
             itemController = null;
 
+            var itemId = itemData.ItemId;
             var itemSettings = _itemSettingsDatabase.GetItemSettingsById(itemId);
             if (itemSettings == null)
             {
@@ -34,10 +45,24 @@ namespace Game.Item
             };
 
             itemController = Instantiate(_itemPrefab);
-            itemController.Init(itemModel);
+            itemController.Init(itemModel, itemData);
 
             _itemModels.Add(itemController, itemModel);
             return true;
+        }
+
+        public TryResult TryCreateRandomItem(out ItemModel itemModel, out ItemController itemController)
+        {
+            var itemSettings = _itemSettingsDatabase.GetData();
+            var randomItemSetting = itemSettings.GetRandom();
+            if(randomItemSetting == null)
+            {
+                itemModel = null;
+                itemController = null;
+                return false;
+            }
+
+            return TryCreateItem(randomItemSetting.Id, out itemModel, out itemController);
         }
 
         public void RemoveItem(ItemController item)
@@ -48,7 +73,7 @@ namespace Game.Item
             }
 
             _itemModels.Remove(item);
-            Destroy(item);
+            Destroy(item.gameObject);
         }
 
         public bool IsValidItemId(string itemId)

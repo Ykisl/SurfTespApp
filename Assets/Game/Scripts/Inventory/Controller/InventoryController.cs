@@ -1,4 +1,5 @@
 using Game.Common;
+using Game.Drag;
 using Game.Inventory.Model;
 using Game.Item;
 using Game.Item.Controller;
@@ -6,6 +7,7 @@ using Game.Item.Model;
 using RedMoonGames.Basics;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -16,7 +18,7 @@ namespace Game.Inventory.Controller
     {
         public UnityDictionary<ItemData, Vector2Int> Items = new UnityDictionary<ItemData, Vector2Int>();
     }
-    public class InventoryController : MonoBehaviour
+    public class InventoryController : MonoBehaviour, IDragTarget
     {
         [SerializeField] private ACommonView _view;
         [Space]
@@ -33,7 +35,11 @@ namespace Game.Inventory.Controller
         private Pool<InventorySlotController> _slotsPool;
         private Dictionary<InventorySlotModel, InventorySlotController> _slotControllers;
 
-        public event Action<InventoryController, ItemData, Vector2Int> OnItemLoad;
+        private Dictionary<ItemController, ItemModel> _itemModels;
+        private Dictionary<ItemController, ItemData> _itemData;
+
+        public event Action<InventoryControllerData> OnDataChanged;
+        public event Action<InventoryController, ItemController> OnItemTapped;
 
         private void Awake()
         {
@@ -46,6 +52,8 @@ namespace Game.Inventory.Controller
             }, 10);
 
             _slotControllers = new Dictionary<InventorySlotModel, InventorySlotController>();
+            _itemModels = new Dictionary<ItemController, ItemModel>();
+            _itemData = new Dictionary<ItemController, ItemData>();
         }
 
         public void Init(InventoryModel model)
@@ -67,7 +75,7 @@ namespace Game.Inventory.Controller
             foreach (var itemPair in _data.Items)
             {
                 var itemData = itemPair.Key;
-                if (!_itemsService.TryCreateItem(itemData.ItemId, out var itemModel, out var itemController))
+                if (!_itemsService.TryCreateItem(itemData, out var itemModel, out var itemController))
                 {
                     continue;
                 }
@@ -81,6 +89,8 @@ namespace Game.Inventory.Controller
                     continue;
                 }
 
+                _itemData.Add(itemController, itemData);
+                AddItemControllerAssign(itemController, itemModel);
                 MoveItemControllerToSlot(itemController, itemPosition);
             }
         }
@@ -102,9 +112,52 @@ namespace Game.Inventory.Controller
             return slotController.transform.position;
         }
 
+        public List<Vector2Int> GetNearestSlotsForWorldPosition(Vector2 position)
+        {
+            var slots = _model.Slots.Select(slot => slot.Key).ToList();
+            slots.Sort((s1, s2) =>
+            {
+                var firstWorldPosition = GetSlotWorldPosition(s1);
+                var firstDistance = Vector2.Distance(firstWorldPosition, position);
+                var secondWorldPosition = GetSlotWorldPosition(s2);
+                var secondDistance = Vector2.Distance(secondWorldPosition, position);
+                return firstDistance.CompareTo(secondDistance);
+            });
+
+            return slots;
+        }
+
+        public TryResult TryGetAvalibleSlotPositionForSize(Vector2Int slotSize, out Vector2Int slotPosition)
+        {
+            return _model.TryGetAvalibleSlotPositionForSize(slotSize, out slotPosition);
+        }
+
         public bool IsSlotBoxEmpty(Vector2Int slotPosition, Vector2Int slotSize)
         {
             return _model.TryGetEmptySlotsForSize(slotPosition, slotSize, out var slots);
+        }
+
+        public bool IsValdDraggable(IDraggable draggable)
+        {
+            if(draggable is not ItemController itemController)
+            {
+                return false;
+            }
+
+            var nearestSlots = GetNearestSlotsForWorldPosition(itemController.ItemPosition);
+            var firstSlot = nearestSlots.FirstOrDefault();
+
+            return IsSlotBoxEmpty(firstSlot, itemController.Size);
+        }
+
+        public void DropDraggable(IDraggable draggable)
+        {
+            var itemController = draggable as ItemController;
+
+            var nearestSlots = GetNearestSlotsForWorldPosition(itemController.ItemPosition);
+            var firstSlot = nearestSlots.FirstOrDefault();
+
+            TryAddItemController(itemController, firstSlot);
         }
 
         private void UpdateSlotControllers(InventoryModel newModel)
@@ -140,9 +193,79 @@ namespace Game.Inventory.Controller
             }
         }
 
+        #region ItemController
+
+        public TryResult TryAddItemController(ItemController itemController, Vector2Int slotPosition)
+        {
+            if (_itemData.ContainsKey(itemController))
+            {
+                return false;
+            }
+
+            if (!_model.TryAddItem(slotPosition, itemController.Model))
+            {
+                return false;
+            }
+
+            var itemData = itemController.Data;
+            _data.Items.Add(itemData, slotPosition);
+            _itemData.Add(itemController, itemData);
+
+            AddItemControllerAssign(itemController, itemController.Model);
+            MoveItemControllerToSlot(itemController, slotPosition);
+
+            OnDataChanged?.Invoke(_data);
+            return true;
+        }
+
+        public void RemoveItemController(ItemController itemController)
+        {
+            RemoveItemControllerAssign(itemController);
+
+            if (!_itemData.TryGetValue(itemController, out var itemData))
+            {
+                return;
+            }
+
+            _model.RemoveItem(itemController.Model);
+
+            _itemData?.Remove(itemController);
+            _data.Items.Remove(itemData);
+
+            OnDataChanged?.Invoke(_data);
+        }
+
+        private void AddItemControllerAssign(ItemController itemController, ItemModel itemModel)
+        {
+            if (_itemModels.ContainsKey(itemController))
+            {
+                return;
+            }
+
+            _itemModels.Add(itemController, itemModel);
+            itemController.OnDragStarted += HandleItemDragStarted;
+            itemController.OnDragFinished += HandleDragFinished;
+            itemController.OnDragDiscarded += HandleItemDragDiscarded;
+            itemController.OnTapped += HandleItemTapped;
+        }
+
+        private void RemoveItemControllerAssign(ItemController itemController)
+        {
+            if (!_itemModels.ContainsKey(itemController))
+            {
+                return;
+            }
+
+            itemController.OnDragStarted -= HandleItemDragStarted;
+            itemController.OnDragFinished -= HandleDragFinished;
+            itemController.OnDragDiscarded -= HandleItemDragDiscarded;
+            itemController.OnTapped -= HandleItemTapped;
+
+            _itemModels.Remove(itemController);
+        }
+
         private void MoveItemControllerToSlot(ItemController itemController, Vector2Int slotPosition)
         {
-            Debug.Log(_model);
             var sideSlotPosition = _model.GetBoxSideSlotPosition(slotPosition, itemController.Size);
 
             var mainPosition = GetSlotWorldPosition(slotPosition);
@@ -156,5 +279,34 @@ namespace Game.Inventory.Controller
 
             itemController.SetSlotSize(_model.SlotSize);
         }
+
+        private void HandleItemDragStarted(ItemController itemController, Vector2 position)
+        {
+            var itemModel = _itemModels[itemController];
+            _model.RemoveItem(itemModel);
+        }
+
+        private void HandleDragFinished(ItemController itemController, Vector2 dragStopPosition)
+        {
+            RemoveItemController(itemController);
+        }
+
+        private void HandleItemDragDiscarded(ItemController itemController, Vector2 dragStopPosition, Vector2 dragStartPosition)
+        {
+            var nearestSlots = GetNearestSlotsForWorldPosition(dragStartPosition);
+            var firstSlot = nearestSlots.FirstOrDefault();
+
+            var itemModel = _itemModels[itemController];
+            _model.TryAddItem(firstSlot, itemModel);
+
+            MoveItemControllerToSlot(itemController, firstSlot);
+        }
+
+        private void HandleItemTapped(ItemController item, Vector2 position)
+        {
+            OnItemTapped?.Invoke(this, item);
+        }
+
+        #endregion
     }
 }
