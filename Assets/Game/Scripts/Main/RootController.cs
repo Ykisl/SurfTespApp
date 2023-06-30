@@ -68,16 +68,7 @@ namespace Game.Main
 
         public void LoadSaveData(string saveData, int saveVersion, Timestamp? saveTimestamp)
         {
-            _data = JsonUtility.FromJson<RootControllerData>(saveData) ?? new RootControllerData()
-            {
-                InventoryData = new InventoryControllerData()
-                {
-                    Items = new UnityDictionary<ItemData, Vector2Int>()
-                    {
-                        { new ItemData { ItemId = "Item01" }, new Vector2Int(2, 2) }
-                    }
-                }
-            };
+            _data = JsonUtility.FromJson<RootControllerData>(saveData) ?? new RootControllerData();
 
             Init();
             _mainInventory.Load(_data.InventoryData);
